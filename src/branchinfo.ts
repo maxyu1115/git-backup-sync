@@ -28,12 +28,15 @@ export class BranchInfoManager {
             for (const [key, value] of Object.entries(jsonObject)) {
                 this.branchInfoMap.set(key, value as BranchInfo);
             }
+        }, onrejected => {
+            // Do nothing, since we'll then create a new file
+            this.branchInfoMap = new Map();
         });
     }
 
     private async updateBranchInfoFile() {
         let branchInfoUri = this.workspaceUri.with({path: this.workspaceUri.path + "/" + this.lastPath});
-        vscode.workspace.fs.writeFile(branchInfoUri, 
+        return vscode.workspace.fs.writeFile(branchInfoUri, 
             this.encoder.encode(
                 JSON.stringify(Object.fromEntries(this.branchInfoMap), null, 4)
             )
@@ -57,9 +60,17 @@ export class BranchInfoManager {
     }
 
     public async update(branchInfoPath: string, branchName: string, branchInfo: BranchInfo) {
+        // this makes sure the branch info map is up to date
+        await this.getMap(branchInfoPath);
         this.branchInfoMap.set(branchName, branchInfo);
         return this.updateBranchInfoFile();
     }
 
+    public async delete(branchInfoPath: string, branchName: string) {
+        // this makes sure the branch info map is up to date
+        await this.getMap(branchInfoPath);
+        this.branchInfoMap.delete(branchName);
+        return this.updateBranchInfoFile();
+    }
     
 }

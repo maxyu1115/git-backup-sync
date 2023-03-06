@@ -17,15 +17,23 @@
     "commands": [
       {
         "command": "active-git-backup.createBackupBranch",
-        "title": "Create Backup Branch"
+        "title": "Active Git Backup: Create Backup Branch"
+      },
+      {
+        "command": "active-git-backup.retireBackupBranch",
+        "title": "Active Git Backup: Retire Backup Branch"
+      },
+      {
+        "command": "active-git-backup.syncBackupBranch",
+        "title": "Active Git Backup: Sync Backup Branch"
       },
       {
         "command": "active-git-backup.backup",
-        "title": "Backup"
+        "title": "Active Git Backup: Backup"
       },
       {
         "command": "active-git-backup.loadBackup",
-        "title": "Load Backup"
+        "title": "Active Git Backup: Load Backup"
       }
     ],
     "configuration": {

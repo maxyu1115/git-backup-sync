@@ -1,71 +1,36 @@
-# active-git-backup README
+# VSCode Active Git Backup Extension
 
-This is the README for your extension "active-git-backup". After writing up a brief description, we recommend including the following sections.
+Active Git Backup is an extension for Visual Studio Code, aiming to provide a way to actively backup your work in progress through the use of git.
+
+This extension fundamentally manages an individual backup branch for branches, pushes your work in progress to the backup branch, but still keeps those changes unstaged on your own branch.
+
+### Use Case 1: Backing up WIP
+
+Currently, when we have work in progress, we generally don't want to commit it to our remote repository to avoid poluting the git history. On the other hand, we want to backup our changes in case of lossing it. With git currently, the best option I know of is to fix the git history eventually with interactive rebases and force pushes. This is always a hassle.
+
+With Active Git Backup, after creating a backup branch, whenever you want to make a backup, just run `active-git-backup.backup`. Or if autobackup is configured, whenever text files are saved, it is automatically backed up. And the biggest benefit is that all your local changes are still uncommitted on your current branch.
+
+### Use Case 2: Syncing WIP across multiple devices
+> Disclaimer: this use case doesn't work well when many people are actively making commits to the remote branch.
+
+For people working across multiple devices, syncing your work in progress across the devices is also annoying; similar to making backups, yes you can make commits and push, but often times you don't want to polute git history.
+
+With Active Git Backup, after creating a backup branch, before switching devices, run `active-git-backup.backup`, and on your other device, run `active-git-backup.loadBackup`. Your other device then get's all the uncommitted changes from your first device.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+Active Git Backup currently supports the following commands:
+- `createBackupBranch`: creates a backup branch for your current branch. Unless overriden, branch `xxx`'s backup branch will be named `agb-backup-xxx`.
+- `backup`: Backups your currently branch onto the created backup branch.
+- `loadBackup`: Loads the your current branch's backup from `origin`. **Note that this stashes your local uncommitted changes**
+- `syncBackupBranch`: Syncs your current branch's backup branch to be based off of your current branch. **This is necessary when you committed to your current branch, or pulled in new changes**.
+- `retireBackupBranch`: When you no longer want to backup your current branch, removes the backup branch's agb file entry.
 
 ## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+* `active-git-backup.branchInfoPath`: Points to the location of the branch info file. This defaults to `.agbbinfo`.
+* `active-git-backup.defaultAutoBackupBranches`: When creating new backup branches, the new backup branch starts off with `autobackup = defaultAutoBackupBranches`. This defaults to `false`.
 
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+## GitHub
+The code for this extension is available on github at: https://github.com/maxyu1115/active-git-backup
