@@ -187,7 +187,7 @@ class ActiveGitBackup {
 		// unstage current changes
 		console.log(await this._git.reset());
 		console.log(await this._git.add(this._config.branchInfoPath));
-		console.log(await this._git.commit(`active-git-backup: create backup branch for ${currentBranchName}]`));
+		console.log(await this._git.commit(`active-git-backup: create backup branch for [${currentBranchName}]`));
 		console.log(await this._git.branch([backupBranchName, currentBranchName]));
 		return backupBranchName;
 	}
@@ -258,7 +258,7 @@ class ActiveGitBackup {
 		}
 		console.log(await this._git.add("."));
 		console.log(await this._git.commit(`active-git-backup: backup commit [${randomUUID()}]`));
-		console.log(await this._git.push(["origin", currentBranchName, "--force"]));
+		console.log(await this._git.push("origin", backupBranchName, ["--force"]));
 		console.log(await this._git.reset(["--mixed", "HEAD~1"]));
 		console.log(await this._git.checkout(currentBranchName));
 	}
