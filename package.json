@@ -49,6 +49,11 @@
           "type": "boolean",
           "default": false,
           "description": "Unless overrided for specific branches, auto backup every branch"
+        },
+        "active-git-backup.backupUpstream": {
+          "type": "string",
+          "default": "origin",
+          "description": "The upstream name we backup to. This defaults to \"origin\""
         }
       }
     }

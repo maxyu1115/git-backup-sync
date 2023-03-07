@@ -72,6 +72,7 @@ export function deactivate() { }
 
 interface IConfig {
 	branchInfoPath: string;
+	backupUpstream: string;
 	// defaultBackupEveryBranch: boolean;
 	defaultAutoBackupBranches: boolean;
 }
@@ -258,7 +259,7 @@ class ActiveGitBackup {
 		}
 		console.log(await this._git.add("."));
 		console.log(await this._git.commit(`active-git-backup: backup commit [${randomUUID()}]`));
-		console.log(await this._git.push("origin", backupBranchName, ["--force"]));
+		console.log(await this._git.push(this._config.backupUpstream, backupBranchName, ["--force"]));
 		console.log(await this._git.reset(["--mixed", "HEAD~1"]));
 		console.log(await this._git.checkout(currentBranchName));
 	}
@@ -284,8 +285,7 @@ class ActiveGitBackup {
 		console.log(await this._git.stash());
 		console.log(await this._git.checkout(backupBranchName));
 		console.log(await this._git.fetch());
-		// TODO: handle non-origin use cases
-		console.log(await this._git.reset(["--hard", "origin/" + backupBranchName]));
+		console.log(await this._git.reset(["--hard", this._config.backupUpstream + "/" + backupBranchName]));
 		console.log(await this._git.reset(["--mixed", "HEAD~1"]));
 		console.log(await this._git.checkout(currentBranchName));
 
