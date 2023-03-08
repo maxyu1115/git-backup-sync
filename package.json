@@ -1,8 +1,13 @@
 {
   "name": "active-git-backup",
-  "displayName": "active-git-backup",
+  "displayName": "Active Git Backup",
   "description": "Extension for automating backup branch management",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "publisher": "max-yu",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxyu1115/active-git-backup.git"
+  },
   "engines": {
     "vscode": "^1.74.0"
   },
