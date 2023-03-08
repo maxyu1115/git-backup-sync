@@ -16,15 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
 		extension.loadConfig();
 	});
 
-	vscode.commands.registerCommand('extension.active-git-backup.enableExtension', () => {
-		extension.isEnabled = true;
-	});
-
-	vscode.commands.registerCommand('extension.active-git-backup.disableExtension', () => {
-		extension.isEnabled = false;
-	});
-
 	vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
+		// TODO: do we want to ignore document if it is the agbinfo file?
 		let branchName = await extension.getCurrentBranchName();
 		let shouldBackup = await extension.shouldAutoBackup(branchName);
 		if (shouldBackup) {
@@ -72,9 +65,9 @@ export function deactivate() { }
 
 interface IConfig {
 	branchInfoPath: string;
-	backupUpstream: string;
-	// defaultBackupEveryBranch: boolean;
+	defaultBackupUpstreamName: string;
 	defaultAutoBackupBranches: boolean;
+	shouldCommitBranchInfoFile: boolean;
 }
 
 class ActiveGitBackup {
@@ -97,11 +90,10 @@ class ActiveGitBackup {
 			console.log(vscode.workspace.workspaceFolders[0].uri.fsPath);
 			this._git = git.simpleGit({ baseDir: vscode.workspace.workspaceFolders[0].uri.fsPath });
 			this._branchInfo = new branchInfo.BranchInfoManager(
-				vscode.workspace.workspaceFolders[0].uri,
-				this._config.branchInfoPath
+				vscode.workspace.workspaceFolders[0].uri
 			);
 		} else {
-			throw new Error("???????");
+			throw new Error("Active Git Backup: Failed to activate extension, this can only be ran from within a workspace.");
 		}
 	}
 
@@ -187,8 +179,10 @@ class ActiveGitBackup {
 		});
 		// unstage current changes
 		console.log(await this._git.reset());
-		console.log(await this._git.add(this._config.branchInfoPath));
-		console.log(await this._git.commit(`active-git-backup: create backup branch for [${currentBranchName}]`));
+		if (this._config.shouldCommitBranchInfoFile) {
+			console.log(await this._git.add(this._config.branchInfoPath));
+			console.log(await this._git.commit(`active-git-backup: create backup branch for [${currentBranchName}]`));
+		}
 		console.log(await this._git.branch([backupBranchName, currentBranchName]));
 		return backupBranchName;
 	}
@@ -211,6 +205,8 @@ class ActiveGitBackup {
 
 		console.log(await this._branchInfo.delete(this._config.branchInfoPath, currentBranchName));
 		console.log(await this._git.deleteLocalBranch(backupBranchInfo.backupBranchName));
+
+		// TODO: undo the "active-git-backup: create backup branch" commit?
 	}
 
 	public async syncBackupBranch(branchName?: string): Promise<string | undefined> {
@@ -229,6 +225,7 @@ class ActiveGitBackup {
 			return;
 		}
 
+		// by recreating the local backup branch, we make sure the local backup branch is in sync to the local branch
 		console.log(await this._git.deleteLocalBranch(backupBranchInfo.backupBranchName));
 		console.log(await this._git.branch([backupBranchInfo.backupBranchName, currentBranchName]));
 	}
@@ -247,6 +244,7 @@ class ActiveGitBackup {
 		}
 		let backupBranchName: string = branchInfo.backupBranchName;
 
+		// unstages current changes
 		console.log(await this._git.reset());
 		try {
 			console.log(await this._git.checkout(backupBranchName));
@@ -257,9 +255,13 @@ class ActiveGitBackup {
 				 + currentBranchName + ". Did you refresh your backup branch after last commit, or forgot to pull your current branch? ");
 			return;
 		}
+		// stage and commits current changes to backup branch
 		console.log(await this._git.add("."));
 		console.log(await this._git.commit(`active-git-backup: backup commit [${randomUUID()}]`));
-		console.log(await this._git.push(this._config.backupUpstream, backupBranchName, ["--force"]));
+		// force pushes since we are rewriting git history
+		console.log(await this._git.push(this._config.defaultBackupUpstreamName, backupBranchName, ["--force"]));
+		// IMPORTANT: the local backup branch is ALWAYS maintained in a state in sync with your local branch
+		// 		It is therefore always lagging behind the upstream backup branch.
 		console.log(await this._git.reset(["--mixed", "HEAD~1"]));
 		console.log(await this._git.checkout(currentBranchName));
 	}
@@ -282,11 +284,15 @@ class ActiveGitBackup {
 			return false;
 		}
 		let backupBranchName: string = branchInfo.backupBranchName;
+		// stashes the current changes. Normally this shouldn't do anything since you wouldn't want to load backup with local changes
 		console.log(await this._git.stash());
 		console.log(await this._git.checkout(backupBranchName));
 		console.log(await this._git.fetch());
-		console.log(await this._git.reset(["--hard", this._config.backupUpstream + "/" + backupBranchName]));
+		// pulls in the most up to date backup branch
+		console.log(await this._git.reset(["--hard", this._config.defaultBackupUpstreamName + "/" + backupBranchName]));
+		// undoes the last commit
 		console.log(await this._git.reset(["--mixed", "HEAD~1"]));
+		// brings those changes in the last commit over to the current branch
 		console.log(await this._git.checkout(currentBranchName));
 
 		return true;

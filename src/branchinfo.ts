@@ -15,7 +15,7 @@ export class BranchInfoManager {
     private encoder = new TextEncoder();
     private decoder = new TextDecoder();
 
-    constructor(workspaceUri: vscode.Uri, branchInfoPath: string) {
+    constructor(workspaceUri: vscode.Uri) {
         this.workspaceUri = workspaceUri;
         this.lastPath = undefined;
     }
@@ -48,6 +48,7 @@ export class BranchInfoManager {
             return this.branchInfoMap;
         }
         this.lastPath = branchInfoPath;
+        // only read from fs when cache is invalidated
         return this.readBranchInfoFile().then(() => this.branchInfoMap);
     }
 

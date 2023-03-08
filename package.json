@@ -1,7 +1,7 @@
 {
   "name": "active-git-backup",
   "displayName": "active-git-backup",
-  "description": "",
+  "description": "Extension for automating backup branch management",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.74.0"
@@ -10,7 +10,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:active-git-backup.helloWorld"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -43,17 +43,22 @@
         "active-git-backup.branchInfoPath": {
           "type": "string",
           "default": ".agbbinfo",
-          "description": "Path Pointing to the Branch Info file. (This file needs to be tracked by git)"
+          "description": "Path pointing to the Branch Info file. (This file needs to be tracked by git)"
         },
         "active-git-backup.defaultAutoBackupBranches": {
           "type": "boolean",
           "default": false,
           "description": "Unless overrided for specific branches, auto backup every branch"
         },
-        "active-git-backup.backupUpstream": {
+        "active-git-backup.defaultBackupUpstreamName": {
           "type": "string",
           "default": "origin",
           "description": "The upstream name we backup to. This defaults to \"origin\""
+        },
+        "active-git-backup.shouldCommitBranchInfoFile": {
+          "type": "boolean",
+          "default": false,
+          "description": "When creating a new Backup Branch, do you want to commit the branch info file change. (This is useful for sharing across devices)"
         }
       }
     }
