@@ -153,7 +153,7 @@ class ActiveGitBackup {
 		);
 	}
 
-	public async createBackupBranch(branchName?: string, backupBranchName?: string): Promise<string | undefined> {
+	public async createBackupBranch(branchName?: string): Promise<string | undefined> {
 		if (!this.isEnabled) {
 			return;
 		}
@@ -162,17 +162,26 @@ class ActiveGitBackup {
 
 		let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoPath);
 
+		if (branchInfoMap.has(currentBranchName)) {
+			this.showStatusMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
+			return;
+		}
+
 		let backupBranchNames = new Set(Array.from(branchInfoMap.values()).map(info => info.backupBranchName));
-		backupBranchName = (backupBranchName !== undefined) ? backupBranchName : "agb-backup-" + currentBranchName;
+		let backupBranchName = await vscode.window.showInputBox({
+			placeHolder: "Type a Branch Name, or press ENTER and use the default",
+			prompt: "Create Backup Branch with Name"
+		});
+		if (backupBranchName === undefined) {
+			this.showStatusMessage("Create Backup Branch cancelled");
+			return;
+		}
+		backupBranchName = (backupBranchName !== "") ? backupBranchName : "agb-backup-" + currentBranchName;
 		if (backupBranchNames.has(backupBranchName)) {
 			this.showStatusMessage(`Create Backup Branch failed: intended backup branch name "${backupBranchName}" already exists`);
 			return;
 		}
 
-		if (branchInfoMap.has(currentBranchName)) {
-			this.showStatusMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
-			return;
-		}
 		await this._branchInfo.update(this._config.branchInfoPath, currentBranchName, {
 			autoBackup: this._config.defaultAutoBackupBranches,
 			backupBranchName: backupBranchName,
