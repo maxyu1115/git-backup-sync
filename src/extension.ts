@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "active-git-backup" is now active!');
+	extension.showOutputMessage('Congratulations, your extension "active-git-backup" is now active!');
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('active-git-backup.createBackupBranch',
@@ -112,9 +112,8 @@ class ActiveGitBackup {
 	/**
 	 * Show message in output channel
 	 */
-	public showOutputMessage(message?: string): void {
+	public showOutputMessage(message: string): void {
 		console.log(message);
-		message = message || `Run On Save ${this.isEnabled ? 'enabled' : 'disabled'}.`;
 		this._outputChannel.appendLine(message);
 	}
 
@@ -122,18 +121,23 @@ class ActiveGitBackup {
 	 * Show message in status bar and output channel.
 	 * Return a disposable to remove status bar message.
 	 */
-	public showStatusMessage(message: string): vscode.Disposable {
+	public async showInformationMessage(message: string) {
 		this.showOutputMessage(message);
-		return vscode.window.setStatusBarMessage(message);
+		return await vscode.window.showInformationMessage(message);
+	}
+
+	public async showErrorMessage(message: string) {
+		this.showOutputMessage(message);
+		return await vscode.window.showErrorMessage(message);
 	}
 
 	public async getCurrentBranchName(branchName?: string): Promise<string> {
-		console.log("Getting current branch name");
+		this.showOutputMessage("Getting current branch name");
 		if (branchName !== undefined) {
 			return branchName;
 		}
 		return this._git.branch().then(value => {
-			console.log("git current branch is: " + value.current);
+			this.showOutputMessage("git current branch is: " + value.current);
 			return value.current;
 		});
 	}
@@ -158,12 +162,12 @@ class ActiveGitBackup {
 			return;
 		}
 		let currentBranchName: string = await this.getCurrentBranchName(branchName);
-		console.log(`Creating Backup Branch for "${currentBranchName}"`);
+		this.showOutputMessage(`Creating Backup Branch for "${currentBranchName}"`);
 
 		let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoPath);
 
 		if (branchInfoMap.has(currentBranchName)) {
-			this.showStatusMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
+			this.showErrorMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
 			return;
 		}
 
@@ -173,15 +177,19 @@ class ActiveGitBackup {
 			prompt: "Create Backup Branch with Name"
 		});
 		if (backupBranchName === undefined) {
-			this.showStatusMessage("Create Backup Branch cancelled");
+			this.showInformationMessage("Create Backup Branch cancelled");
 			return;
 		}
 		backupBranchName = (backupBranchName !== "") ? backupBranchName : "agb-backup-" + currentBranchName;
 		if (backupBranchNames.has(backupBranchName)) {
-			this.showStatusMessage(`Create Backup Branch failed: intended backup branch name "${backupBranchName}" already exists`);
+			this.showErrorMessage(`Create Backup Branch failed: intended backup branch name "${backupBranchName}" already exists`);
 			return;
 		}
 
+		if (branchInfoMap.has(currentBranchName)) {
+			this.showErrorMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
+			return;
+		}
 		await this._branchInfo.update(this._config.branchInfoPath, currentBranchName, {
 			autoBackup: this._config.defaultAutoBackupBranches,
 			backupBranchName: backupBranchName,
@@ -202,13 +210,13 @@ class ActiveGitBackup {
 		}
 
 		let currentBranchName: string = await this.getCurrentBranchName(branchName);
-		console.log(`Retiring Backup Branch for "${currentBranchName}"`);
+		this.showOutputMessage(`Retiring Backup Branch for "${currentBranchName}"`);
 
 		let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoPath);
 		let backupBranchInfo = branchInfoMap.get(currentBranchName);
 
 		if (backupBranchInfo === undefined) {
-			this.showStatusMessage(`Retire Backup Branch Aborted: "${currentBranchName}" doesn't have a backup branch, aborting`);
+			this.showErrorMessage(`Retire Backup Branch Aborted: "${currentBranchName}" doesn't have a backup branch, aborting`);
 			return;
 		}
 
@@ -224,13 +232,13 @@ class ActiveGitBackup {
 		}
 
 		let currentBranchName: string = await this.getCurrentBranchName(branchName);
-		console.log(`Syncing Backup Branch for "${currentBranchName}"`);
+		this.showOutputMessage(`Syncing Backup Branch for "${currentBranchName}"`);
 
 		let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoPath);
 		let backupBranchInfo = branchInfoMap.get(currentBranchName);
 
 		if (backupBranchInfo === undefined) {
-			this.showStatusMessage(`Sync Backup Branch Aborted: "${currentBranchName}" doesn't have a backup branch, aborting`);
+			this.showErrorMessage(`Sync Backup Branch Aborted: "${currentBranchName}" doesn't have a backup branch, aborting`);
 			return;
 		}
 
@@ -244,11 +252,11 @@ class ActiveGitBackup {
 			return;
 		}
 		let currentBranchName = await this.getCurrentBranchName(branchName);
-		console.log(`Backing up Current Branch "${currentBranchName}"`);
+		this.showOutputMessage(`Backing up Current Branch "${currentBranchName}"`);
 
 		let branchInfo = await this._branchInfo.get(this._config.branchInfoPath, currentBranchName);
 		if (branchInfo === undefined) {
-			this.showStatusMessage("Backup failed: no backup branch found. Please create backup branch first");
+			this.showErrorMessage("Backup failed: no backup branch found. Please create backup branch first");
 			return;
 		}
 		let backupBranchName: string = branchInfo.backupBranchName;
@@ -260,7 +268,7 @@ class ActiveGitBackup {
 		} catch(exception) {
 			console.log(exception);
 			// TODO: might want to add an auto refresh backup branch
-			this.showStatusMessage("Backup failed during checkout backup branch, backup branch is likely out of sync with your branch "
+			this.showErrorMessage("Backup failed during checkout backup branch, backup branch is likely out of sync with your branch "
 				 + currentBranchName + ". Did you refresh your backup branch after last commit, or forgot to pull your current branch? ");
 			return;
 		}
@@ -280,16 +288,16 @@ class ActiveGitBackup {
 			return false;
 		}
 		let currentBranchName = await this.getCurrentBranchName(branchName);
-		console.log(`Loading Backup for "${currentBranchName}"`);
+		this.showOutputMessage(`Loading Backup for "${currentBranchName}"`);
 
 		if (vscode.workspace.textDocuments.filter(document => document.isDirty).length !== 0) {
-			this.showStatusMessage("Load Backup aborted: Detected unsaved changes in your current workspace");
+			this.showErrorMessage("Load Backup aborted: Detected unsaved changes in your current workspace");
 			return false;
 		}
 
 		let branchInfo = await this._branchInfo.get(this._config.branchInfoPath, currentBranchName);
 		if (branchInfo === undefined) {
-			this.showStatusMessage(`Load Backup failed: No backup branch found for "${currentBranchName}"`);
+			this.showErrorMessage(`Load Backup failed: No backup branch found for "${currentBranchName}"`);
 			return false;
 		}
 		let backupBranchName: string = branchInfo.backupBranchName;
