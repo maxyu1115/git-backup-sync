@@ -1,8 +1,8 @@
 {
   "name": "git-backup-sync",
   "displayName": "Git Backup & Sync",
-  "description": "Extension for automating backup branch management",
-  "version": "0.2.0",
+  "description": "Backup and sync your wip(work in progress) through git",
+  "version": "0.2.1",
   "publisher": "max-yu",
   "repository": {
     "type": "git",
