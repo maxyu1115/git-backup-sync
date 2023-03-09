@@ -1,12 +1,12 @@
 {
-  "name": "active-git-backup",
-  "displayName": "Active Git Backup",
+  "name": "git-backup-sync",
+  "displayName": "Git Backup & Sync",
   "description": "Extension for automating backup branch management",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "max-yu",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxyu1115/active-git-backup.git"
+    "url": "https://github.com/maxyu1115/git-backup-sync.git"
   },
   "engines": {
     "vscode": "^1.74.0"
@@ -21,46 +21,46 @@
   "contributes": {
     "commands": [
       {
-        "command": "active-git-backup.createBackupBranch",
-        "title": "Active Git Backup: Create Backup Branch"
+        "command": "git-backup-sync.createBackupBranch",
+        "title": "Git Backup & Sync: Create Backup Branch"
       },
       {
-        "command": "active-git-backup.retireBackupBranch",
-        "title": "Active Git Backup: Retire Backup Branch"
+        "command": "git-backup-sync.retireBackupBranch",
+        "title": "Git Backup & Sync: Retire Backup Branch"
       },
       {
-        "command": "active-git-backup.syncBackupBranch",
-        "title": "Active Git Backup: Sync Backup Branch"
+        "command": "git-backup-sync.syncBackupBranch",
+        "title": "Git Backup & Sync: Sync Backup Branch"
       },
       {
-        "command": "active-git-backup.backup",
-        "title": "Active Git Backup: Backup"
+        "command": "git-backup-sync.backup",
+        "title": "Git Backup & Sync: Backup"
       },
       {
-        "command": "active-git-backup.loadBackup",
-        "title": "Active Git Backup: Load Backup"
+        "command": "git-backup-sync.loadBackup",
+        "title": "Git Backup & Sync: Load Backup"
       }
     ],
     "configuration": {
       "type": "object",
-      "title": "Active Git Backup",
+      "title": "Git Backup & Sync",
       "properties": {
-        "active-git-backup.branchInfoPath": {
+        "git-backup-sync.branchInfoPath": {
           "type": "string",
-          "default": ".agbbinfo",
-          "description": "Path pointing to the Branch Info file. (This file needs to be tracked by git)"
+          "default": ".bbinfo",
+          "description": "Path pointing to the Backup Branch Info file. This file stores backup branch information necessary to the extension. "
         },
-        "active-git-backup.defaultAutoBackupBranches": {
+        "git-backup-sync.defaultAutoBackupBranches": {
           "type": "boolean",
           "default": false,
           "description": "Unless overrided for specific branches, auto backup every branch"
         },
-        "active-git-backup.defaultBackupUpstreamName": {
+        "git-backup-sync.defaultBackupUpstreamName": {
           "type": "string",
           "default": "origin",
           "description": "The upstream name we backup to. This defaults to \"origin\""
         },
-        "active-git-backup.shouldCommitBranchInfoFile": {
+        "git-backup-sync.shouldCommitBranchInfoFile": {
           "type": "boolean",
           "default": false,
           "description": "When creating a new Backup Branch, do you want to commit the branch info file change. (This is useful for sharing across devices)"

@@ -10,14 +10,14 @@ import { randomUUID } from 'crypto';
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-	var extension = new ActiveGitBackup(context);
+	var extension = new GitBackupSync(context);
 
 	vscode.workspace.onDidChangeConfiguration(() => {
 		extension.loadConfig();
 	});
 
 	vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
-		// TODO: do we want to ignore document if it is the agbinfo file?
+		// TODO: do we want to ignore document if it is the branchinfo file?
 		let branchName = await extension.getCurrentBranchName();
 		let shouldBackup = await extension.shouldAutoBackup(branchName);
 		if (shouldBackup) {
@@ -27,34 +27,34 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	extension.showOutputMessage('Congratulations, your extension "active-git-backup" is now active!');
+	extension.showOutputMessage('Congratulations, your extension "git-backup-sync" is now active!');
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand('active-git-backup.createBackupBranch',
+		vscode.commands.registerCommand('git-backup-sync.createBackupBranch',
 			() => extension.createBackupBranch()
 		)
 	);
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand('active-git-backup.retireBackupBranch',
+		vscode.commands.registerCommand('git-backup-sync.retireBackupBranch',
 			() => extension.retireBackupBranch()
 		)
 	);
 	
 	context.subscriptions.push(
-		vscode.commands.registerCommand('active-git-backup.syncBackupBranch',
+		vscode.commands.registerCommand('git-backup-sync.syncBackupBranch',
 			() => extension.syncBackupBranch()
 		)
 	);
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand('active-git-backup.backup',
+		vscode.commands.registerCommand('git-backup-sync.backup',
 			() => extension.backup()
 		)
 	);
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand('active-git-backup.loadBackup',
+		vscode.commands.registerCommand('git-backup-sync.loadBackup',
 			() => extension.loadBackup()
 		)
 	);
@@ -70,7 +70,7 @@ interface IConfig {
 	shouldCommitBranchInfoFile: boolean;
 }
 
-class ActiveGitBackup {
+class GitBackupSync {
 	private _outputChannel: vscode.OutputChannel;
 	private _context: vscode.ExtensionContext;
 	private config: vscode.WorkspaceConfiguration;
@@ -81,8 +81,8 @@ class ActiveGitBackup {
 
 	constructor(context: vscode.ExtensionContext) {
 		this._context = context;
-		this._outputChannel = vscode.window.createOutputChannel('Active Git Backup');
-		this.config = vscode.workspace.getConfiguration('active-git-backup');
+		this._outputChannel = vscode.window.createOutputChannel('Git Backup & Sync');
+		this.config = vscode.workspace.getConfiguration('git-backup-sync');
 		this._config = <IConfig><any>this.config;
 		console.log(this._config);
 
@@ -93,7 +93,7 @@ class ActiveGitBackup {
 				vscode.workspace.workspaceFolders[0].uri
 			);
 		} else {
-			throw new Error("Active Git Backup: Failed to activate extension, this can only be ran from within a workspace.");
+			throw new Error("Git Backup & Sync: Failed to activate extension, this can only be ran from within a workspace.");
 		}
 	}
 
@@ -105,7 +105,7 @@ class ActiveGitBackup {
 	}
 
 	public loadConfig(): void {
-		this.config = vscode.workspace.getConfiguration('active-git-backup');
+		this.config = vscode.workspace.getConfiguration('git-backup-sync');
 		this._config = <IConfig><any>this.config;
 	}
 
@@ -180,7 +180,7 @@ class ActiveGitBackup {
 			this.showInformationMessage("Create Backup Branch cancelled");
 			return;
 		}
-		backupBranchName = (backupBranchName !== "") ? backupBranchName : "agb-backup-" + currentBranchName;
+		backupBranchName = (backupBranchName !== "") ? backupBranchName : "gbs-backup-" + currentBranchName;
 		if (backupBranchNames.has(backupBranchName)) {
 			this.showErrorMessage(`Create Backup Branch failed: intended backup branch name "${backupBranchName}" already exists`);
 			return;
@@ -198,7 +198,7 @@ class ActiveGitBackup {
 		console.log(await this._git.reset());
 		if (this._config.shouldCommitBranchInfoFile) {
 			console.log(await this._git.add(this._config.branchInfoPath));
-			console.log(await this._git.commit(`active-git-backup: create backup branch for [${currentBranchName}]`));
+			console.log(await this._git.commit(`git-backup-sync: create backup branch for [${currentBranchName}]`));
 		}
 		console.log(await this._git.branch([backupBranchName, currentBranchName]));
 		return backupBranchName;
@@ -223,7 +223,7 @@ class ActiveGitBackup {
 		console.log(await this._branchInfo.delete(this._config.branchInfoPath, currentBranchName));
 		console.log(await this._git.deleteLocalBranch(backupBranchInfo.backupBranchName));
 
-		// TODO: undo the "active-git-backup: create backup branch" commit?
+		// TODO: undo the "git-backup-sync: create backup branch" commit?
 	}
 
 	public async syncBackupBranch(branchName?: string): Promise<string | undefined> {
@@ -274,7 +274,7 @@ class ActiveGitBackup {
 		}
 		// stage and commits current changes to backup branch
 		console.log(await this._git.add("."));
-		console.log(await this._git.commit(`active-git-backup: backup commit [${randomUUID()}]`));
+		console.log(await this._git.commit(`git-backup-sync: backup commit [${randomUUID()}]`));
 		// force pushes since we are rewriting git history
 		console.log(await this._git.push(this._config.defaultBackupUpstreamName, backupBranchName, ["--force"]));
 		// IMPORTANT: the local backup branch is ALWAYS maintained in a state in sync with your local branch

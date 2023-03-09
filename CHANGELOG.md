@@ -1,9 +1,27 @@
 # Change Log
+## [0.2.0] - 2023-03-08
 
-All notable changes to the "active-git-backup" extension will be documented in this file.
+### Changed
+- Changed extension name from `active-git-backup` to `git-backup-sync`
+- Adjusted notification display, now has pop up windows
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+### Added
+- Ability for user to specify a branch name for `createBackupBranch`. Pressing Enter results in the default
 
-## [Unreleased]
+## [0.1.0] - 2023-03-07
 
-- Initial release
+First release : D
+
+### Added
+The following commands:
+- `createBackupBranch`
+- `retireBackupBranch`
+- `syncBackupBranch`
+- `backup`
+- `loadBackup`
+
+And the following configs:
+- `branchInfoPath`
+- `defaultAutoBackupBranches`
+- `defaultBackupUpstreamName`
+- `shouldCommitBranchInfoFile`
