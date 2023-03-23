@@ -171,7 +171,6 @@ class GitBackupSync {
 			return;
 		}
 
-		let backupBranchNames = new Set(Array.from(branchInfoMap.values()).map(info => info.backupBranchName));
 		let backupBranchName = await vscode.window.showInputBox({
 			placeHolder: "Type a Branch Name, or press ENTER and use the default",
 			prompt: "Create Backup Branch with Name"
@@ -181,15 +180,26 @@ class GitBackupSync {
 			return;
 		}
 		backupBranchName = (backupBranchName !== "") ? backupBranchName : "gbs-backup-" + currentBranchName;
-		if (backupBranchNames.has(backupBranchName)) {
+
+		let allBranches = (await this._git.branch()).branches;
+		let allBranchNames = new Set();
+		let remotePrefix = `remotes/${this._config.defaultBackupUpstreamName}/`;
+		for (let name in allBranches) {
+			if (name.startsWith("remotes/")) {
+				// we only need to prevent same names for the desired backup remote+local, other remotes don't matter
+				if (name.startsWith(remotePrefix)) {
+					allBranchNames.add(name.substring(remotePrefix.length));
+				}
+			} else {
+				allBranchNames.add(name);
+			}
+		}
+
+		if (allBranchNames.has(backupBranchName)) {
 			this.showErrorMessage(`Create Backup Branch failed: intended backup branch name "${backupBranchName}" already exists`);
 			return;
 		}
 
-		if (branchInfoMap.has(currentBranchName)) {
-			this.showErrorMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
-			return;
-		}
 		await this._branchInfo.update(this._config.branchInfoPath, currentBranchName, {
 			autoBackup: this._config.defaultAutoBackupBranches,
 			backupBranchName: backupBranchName,
