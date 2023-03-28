@@ -70,6 +70,11 @@ interface IConfig {
 	shouldCommitBranchInfoFile: boolean;
 }
 
+interface BranchCompareResult {
+	firstBranchUniqueCommitCount: number,
+	secondBranchUniqueCommitCount: number,
+}
+
 class GitBackupSync {
 	private _outputChannel: vscode.OutputChannel;
 	private _context: vscode.ExtensionContext;
@@ -155,6 +160,21 @@ class GitBackupSync {
 				return v.autoBackup;
 			})
 		);
+	}
+
+	private async checkBranchesInSync(branchName1: string, branchName2: string, expectedBranch1Ahead: number, expectedBranch2Ahead: number): Promise<boolean> {
+		let result = await this._git.raw(["rev-list", "--left-right", "--count", `${branchName1}...${branchName2}`]);
+		console.log(result);
+		const diffCountParsingRegex = /(\d+)\s+(\d+)/;
+		const match = diffCountParsingRegex.exec(result);
+		if (match !== null && match.length === 2) {
+			const branch1Ahead = parseInt(match[0]);
+			const branch2Ahead = parseInt(match[1]);
+			return (branch1Ahead === expectedBranch1Ahead) && (branch2Ahead === expectedBranch2Ahead);
+		} else {
+			this.showErrorMessage(`git rev-list failed, are you using an up-to-date git?`);
+			return false;
+		}
 	}
 
 	public async createBackupBranch(branchName?: string): Promise<string | undefined> {
@@ -317,6 +337,22 @@ class GitBackupSync {
 		console.log(await this._git.fetch());
 		// pulls in the most up to date backup branch
 		console.log(await this._git.reset(["--hard", this._config.defaultBackupUpstreamName + "/" + backupBranchName]));
+		
+		// Check if backup branch is out of sync
+		// only acceptable output is "0 1", where backup branch is ahead by only 1 commit; which is the backup commit
+		let checkResult = await this.checkBranchesInSync(currentBranchName, backupBranchName, 0, 1);
+		if (checkResult === false) {
+			// switch back to current branch temporarily, in case user ignores UI
+			console.log(await this._git.checkout(currentBranchName));
+			let selection = await vscode.window.showWarningMessage(`"${backupBranchName}" is out of sync with your local branch. Do you still want to continue Loading Backup?`, "Yes", "No");
+			// continue only if the user insists
+			if (selection !== "Yes") {
+				return false;
+			}
+			// switch back to backup branch to load backup
+			console.log(await this._git.checkout(backupBranchName));
+		}
+
 		// undoes the last commit
 		console.log(await this._git.reset(["--mixed", "HEAD~1"]));
 		// brings those changes in the last commit over to the current branch

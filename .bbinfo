@@ -1,0 +1,6 @@
+{
+    "loadbackup-safeguard": {
+        "autoBackup": false,
+        "backupBranchName": "gbs-backup-loadbackup-safeguard"
+    }
+}
