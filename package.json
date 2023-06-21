@@ -69,7 +69,7 @@
         "git-backup-sync.backupBranchNamePrefix": {
           "type": "string",
           "default": "gbs-backup-",
-          "description": "The prefix of backup branch name. This defaults to 'agb-backup-' "
+          "description": "The prefix of backup branch name. This defaults to 'gbs-backup-' "
         }
       }
     }
