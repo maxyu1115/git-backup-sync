@@ -107,6 +107,15 @@ class GitBackupSync {
 
 	public loadConfig(): void {
 		this.config = vscode.workspace.getConfiguration('git-backup-sync');
+		let defaultAutoBackup = this.config.get('defaultAutoBackupBranches');
+		if (defaultAutoBackup !== this._config.defaultAutoBackupBranches) {
+			if (defaultAutoBackup === true) {
+				vscode.window.showWarningMessage("Will not auto backup previously backed-up branches");
+			}
+			else {
+				vscode.window.showWarningMessage("Will auto backup previously backed-up branches");
+			}
+		}
 		this._config = <IConfig><any>this.config;
 	}
 
