@@ -320,34 +320,12 @@ class GitBackupSync {
 			return false;
 		}
 
-		let backupBranchName: string;
-		let branchInfo = await this._branchInfo.get(this._config.branchInfoPath, currentBranchName);
-		if (branchInfo === undefined) {
-			///ask user if they want to loadBackup by giving a backup Branch name
-			let branchName = await vscode.window.showInputBox({
-				placeHolder: 'No backup branch found.Type a Branch Name, or press Esc to cancel',
-				ignoreFocusOut: true, // 光标移开也不会消失
-				prompt: "Load Backup Branch",
-			});
-
-			if (branchName === undefined) {
-				this.showErrorMessage(`Load Backup failed: No backup branch found for "${currentBranchName}"`);
-				return false;
-			}
-
-			backupBranchName = branchName;
-		}
-		else {
-			backupBranchName = branchInfo.backupBranchName;
-		}
-		/*
 		let branchInfo = await this._branchInfo.get(this._config.branchInfoPath, currentBranchName);
 		if (branchInfo === undefined) {
 			this.showErrorMessage(`Load Backup failed: No backup branch found for "${currentBranchName}"`);
 			return false;
 		}
 		let backupBranchName: string = branchInfo.backupBranchName;
-		*/
 		// stashes the current changes. Normally this shouldn't do anything since you wouldn't want to load backup with local changes
 		console.log(await this._git.stash());
 		console.log(await this._git.checkout(backupBranchName));

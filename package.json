@@ -97,8 +97,6 @@
     "webpack-cli": "^5.0.0"
   },
   "dependencies": {
-    "git": "^0.1.5",
-    "simple-git": "^3.16.1",
-    "vscode": "^1.1.37"
+    "simple-git": "^3.16.1"
   }
 }
