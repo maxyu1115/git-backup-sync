@@ -65,6 +65,11 @@
           "type": "boolean",
           "default": false,
           "description": "When creating a new Backup Branch, do you want to commit the branch info file change. (This is useful for sharing across devices)"
+        },
+        "git-backup-sync.backupBranchNamePrefix": {
+          "type": "string",
+          "default": "gbs-backup-",
+          "description": "The prefix of backup branch name. This defaults to 'gbs-backup-' "
         }
       }
     }
