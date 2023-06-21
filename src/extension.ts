@@ -68,6 +68,7 @@ interface IConfig {
 	defaultBackupUpstreamName: string;
 	defaultAutoBackupBranches: boolean;
 	shouldCommitBranchInfoFile: boolean;
+	backupBranchNamePrefix: string;
 }
 
 class GitBackupSync {
@@ -194,7 +195,7 @@ class GitBackupSync {
 			this.showInformationMessage("Create Backup Branch cancelled");
 			return;
 		}
-		backupBranchName = (backupBranchName !== "") ? backupBranchName : "gbs-backup-" + currentBranchName;
+		backupBranchName = (backupBranchName !== "") ? backupBranchName : (this._config.backupBranchNamePrefix + currentBranchName);
 
 		let allBranches = (await this._git.branch()).branches;
 		let allBranchNames = new Set();
