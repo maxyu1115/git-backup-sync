@@ -108,15 +108,26 @@ class GitBackupSync {
 	public loadConfig(): void {
 		this.config = vscode.workspace.getConfiguration('git-backup-sync');
 		let defaultAutoBackup = this.config.get('defaultAutoBackupBranches');
-		if (defaultAutoBackup !== this._config.defaultAutoBackupBranches) {
+		let lastDefaultAutoBackup = this._config.defaultAutoBackupBranches;
+		this._config = <IConfig><any>this.config;
+		if (defaultAutoBackup !== lastDefaultAutoBackup) {
 			if (defaultAutoBackup === true) {
-				vscode.window.showWarningMessage("Will not auto backup previously backed-up branches");
+				vscode.window.showWarningMessage("Do you want to auto backup all branches?", "Yes", "No").then(selection => {
+					if (selection === 'Yes') {
+						//update branchinfo here
+						this._branchInfo.updateAutoBackup(this._config.branchInfoPath, this._config.defaultAutoBackupBranches);
+					}
+				});
 			}
 			else {
-				vscode.window.showWarningMessage("Will auto backup previously backed-up branches");
+				vscode.window.showWarningMessage("Do you want to undo auto-backup for all branches?", "Yes", "No").then(selection => {
+					if(selection === 'Yes') {
+						//update branchinfo here
+						this._branchInfo.updateAutoBackup(this._config.branchInfoPath, this._config.defaultAutoBackupBranches);
+					}
+				});
 			}
 		}
-		this._config = <IConfig><any>this.config;
 	}
 
 	/**
