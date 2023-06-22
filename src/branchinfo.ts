@@ -74,4 +74,11 @@ export class BranchInfoManager {
         return this.updateBranchInfoFile();
     }
     
+    public async updateAutoBackup(branchInfoPath: string, defaultAutoBackupBranches:boolean) {
+        await this.getMap(branchInfoPath);
+        this.branchInfoMap.forEach( (_branchInfo,branchName) => {
+            _branchInfo.autoBackup = defaultAutoBackupBranches;
+        });
+        return this.updateBranchInfoFile();
+    }
 }
