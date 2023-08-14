@@ -33,6 +33,8 @@ This extension contributes the following settings:
 * `git-backup-sync.branchInfoPath`: Points to the location of the branch info file. This defaults to `.branchinfo`.
 * `git-backup-sync.defaultBackupUpstreamName`: Name of the default upstream name. This defaults to `origin`.
 * `git-backup-sync.defaultAutoBackupBranches`: When creating new backup branches, the new backup branch starts off with `autobackup = defaultAutoBackupBranches`. This defaults to `false`.
+* `git-backup-sync.shouldCommitBranchInfoFile`: When creating a new Backup Branch, do you want to commit the branch info file change. (This is useful for sharing across devices). This defaults to `false`.
+* `git-backup-sync.backupBranchNamePrefix`: The default prefix of the backup branch name. This defaults to `"gbs-backup-"`.
 
 These settings don't need to be shared and can be different across clones, even including `branchInfoPath`. (But if one wants to sync changes across devices, they need to use the same backup branch. )
 

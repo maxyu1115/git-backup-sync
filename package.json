@@ -2,7 +2,7 @@
   "name": "git-backup-sync",
   "displayName": "Git Backup & Sync",
   "description": "Backup and sync your wip(work in progress) through git",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "max-yu",
   "repository": {
     "type": "git",

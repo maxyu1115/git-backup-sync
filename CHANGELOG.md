@@ -1,4 +1,21 @@
 # Change Log
+
+## [0.3.0] - 2023-08-13
+
+### Changed
+- Added safeguard for calling `loadBackup` when branch is out of sync
+- When calling `loadBackup` when no backup branch is found, ask user to specify a backup branch
+- Added a warning window where users can choose to toggle auto-backup setting for all previously backed-up branches when they change the `defaultAutoBackupBranches`` config value
+
+### Added
+- `defaultBackupBranchNamePrefix` config to configure the default backup branch name
+- Icon for the extension
+
+### Fixed
+- `createBackupBranch` now checks for branch names in use
+
+
+
 ## [0.2.0] - 2023-03-08
 
 ### Changed
