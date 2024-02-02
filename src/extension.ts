@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
 	var extension = new GitBackupSync(context);
 
 	vscode.workspace.onDidChangeConfiguration(() => {
-		extension.loadConfig();
+		extension.reloadConfig();
 	});
 
 	vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
@@ -63,18 +63,39 @@ export function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated
 export function deactivate() { }
 
-interface IConfig {
+interface IBranchInfoConfig {
 	branchInfoPath: string;
-	defaultBackupUpstreamName: string;
-	defaultAutoBackupBranches: boolean;
 	shouldCommitBranchInfoFile: boolean;
+}
+
+interface IConfig {
 	backupBranchNamePrefix: string;
+	defaultAutoBackupBranches: boolean;
+	defaultBackupUpstreamName: string;
+
+	// Configs only present when branchInfo file is enabled
+	branchInfoConfig: IBranchInfoConfig | undefined;
+}
+
+function parseConfig(): IConfig {
+	let branchInfoConfig: IBranchInfoConfig | undefined = undefined;
+	if (vscode.workspace.getConfiguration('git-backup-sync').get("branchInfo.enabled") === true) {
+		branchInfoConfig = {
+			branchInfoPath: <string> vscode.workspace.getConfiguration('git-backup-sync').get("branchInfo.path"),
+			shouldCommitBranchInfoFile: <boolean> vscode.workspace.getConfiguration('git-backup-sync').get("branchInfo.shouldCommitBranchInfoFile")
+		};
+	}
+	return {
+		backupBranchNamePrefix: <string> vscode.workspace.getConfiguration('git-backup-sync').get("backupBranchNamePrefix"),
+		defaultAutoBackupBranches: <boolean> vscode.workspace.getConfiguration('git-backup-sync').get("defaultAutoBackupBranches"),
+		defaultBackupUpstreamName: <string> vscode.workspace.getConfiguration('git-backup-sync').get("defaultBackupUpstreamName"),
+		branchInfoConfig: branchInfoConfig
+	};
 }
 
 class GitBackupSync {
 	private _outputChannel: vscode.OutputChannel;
 	private _context: vscode.ExtensionContext;
-	private config: vscode.WorkspaceConfiguration;
 	private _config: IConfig;
 
 	private _git: git.SimpleGit;
@@ -83,8 +104,7 @@ class GitBackupSync {
 	constructor(context: vscode.ExtensionContext) {
 		this._context = context;
 		this._outputChannel = vscode.window.createOutputChannel('Git Backup & Sync');
-		this.config = vscode.workspace.getConfiguration('git-backup-sync');
-		this._config = <IConfig><any>this.config;
+		this._config = parseConfig();
 		console.log(this._config);
 
 		if (vscode.workspace.workspaceFolders !== undefined) {
@@ -105,25 +125,24 @@ class GitBackupSync {
 		this._context.globalState.update('isEnabled', value);
 	}
 
-	public loadConfig(): void {
-		this.config = vscode.workspace.getConfiguration('git-backup-sync');
-		let defaultAutoBackup = this.config.get('defaultAutoBackupBranches');
-		let lastDefaultAutoBackup = this._config.defaultAutoBackupBranches;
-		this._config = <IConfig><any>this.config;
-		if (defaultAutoBackup !== lastDefaultAutoBackup) {
-			if (defaultAutoBackup === true) {
-				vscode.window.showWarningMessage("Do you want to auto backup all branches?", "Yes", "No").then(selection => {
-					if (selection === 'Yes') {
-						//update branchinfo here
-						this._branchInfo.updateAutoBackup(this._config.branchInfoPath, this._config.defaultAutoBackupBranches);
-					}
-				});
-			}
-			else {
-				vscode.window.showWarningMessage("Do you want to undo auto-backup for all branches?", "Yes", "No").then(selection => {
+	public reloadConfig(): void {
+		let lastDefaultAutoBackup: boolean = this._config.defaultAutoBackupBranches;
+		let branchInfoEnabledBefore: boolean = this._config.branchInfoConfig !== undefined;
+		// update configs
+		this._config = parseConfig();
+
+		let defaultAutoBackup: boolean = this._config.defaultAutoBackupBranches;
+		let branchInfoEnabledAfter: boolean = this._config.branchInfoConfig !== undefined;
+		if (branchInfoEnabledAfter) {
+			let branchInfoPath = (<IBranchInfoConfig> this._config.branchInfoConfig).branchInfoPath;
+			if (branchInfoEnabledAfter !== branchInfoEnabledBefore && defaultAutoBackup === lastDefaultAutoBackup) {
+				this._branchInfo.updateAutoBackup(branchInfoPath, this._config.defaultAutoBackupBranches);
+			} else if (defaultAutoBackup !== lastDefaultAutoBackup) {
+				let msg: string = defaultAutoBackup ? "Do you want to auto backup all branches?" : "Do you want to undo auto-backup for all branches?";
+				vscode.window.showWarningMessage(msg, "Yes", "No").then(selection => {
 					if(selection === 'Yes') {
 						//update branchinfo here
-						this._branchInfo.updateAutoBackup(this._config.branchInfoPath, this._config.defaultAutoBackupBranches);
+						this._branchInfo.updateAutoBackup(branchInfoPath, this._config.defaultAutoBackupBranches);
 					}
 				});
 			}
@@ -142,12 +161,12 @@ class GitBackupSync {
 	 * Show message in status bar and output channel.
 	 * Return a disposable to remove status bar message.
 	 */
-	public async showInformationMessage(message: string) {
+	private async showInformationMessage(message: string) {
 		this.showOutputMessage(message);
 		return await vscode.window.showInformationMessage(message);
 	}
 
-	public async showErrorMessage(message: string) {
+	private async showErrorMessage(message: string) {
 		this.showOutputMessage(message);
 		return await vscode.window.showErrorMessage(message);
 	}
@@ -169,12 +188,17 @@ class GitBackupSync {
 		}
 	
 		return this.getCurrentBranchName(branchName).then(currentBranchName => 
-			this._branchInfo.get(this._config.branchInfoPath, currentBranchName).then(v => {
-				if (v === undefined) {
-					return false;
+			{
+				if (this._config.branchInfoConfig === undefined) {
+					return this._config.defaultAutoBackupBranches;
 				}
-				return v.autoBackup;
-			})
+				return this._branchInfo.get(this._config.branchInfoConfig.branchInfoPath, currentBranchName).then(v => {
+					if (v === undefined) {
+						return false;
+					}
+					return v.autoBackup;
+				});
+			}
 		);
 	}
 
@@ -193,6 +217,19 @@ class GitBackupSync {
 		}
 	}
 
+	private async getBackupBranchName(currentBranchName: string): Promise<string | undefined> {
+		if (this._config.branchInfoConfig === undefined) {
+			return this._config.backupBranchNamePrefix + currentBranchName;
+		}
+		return this._branchInfo.getMap(this._config.branchInfoConfig.branchInfoPath).then(branchInfoMap => {
+			let backupBranchInfo= branchInfoMap.get(currentBranchName);
+			if (backupBranchInfo === undefined) {
+				return undefined;
+			}
+			return backupBranchInfo.backupBranchName;
+		});
+	}
+
 	public async createBackupBranch(branchName?: string): Promise<string | undefined> {
 		if (!this.isEnabled) {
 			return;
@@ -200,22 +237,26 @@ class GitBackupSync {
 		let currentBranchName: string = await this.getCurrentBranchName(branchName);
 		this.showOutputMessage(`Creating Backup Branch for "${currentBranchName}"`);
 
-		let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoPath);
+		let backupBranchName: string = this._config.backupBranchNamePrefix + currentBranchName;
 
-		if (branchInfoMap.has(currentBranchName)) {
-			this.showErrorMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
-			return;
-		}
+		if (this._config.branchInfoConfig !== undefined) {
+			let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoConfig.branchInfoPath);
 
-		let backupBranchName = await vscode.window.showInputBox({
-			placeHolder: "Type a Branch Name, or press ENTER and use the default",
-			prompt: "Create Backup Branch with Name"
-		});
-		if (backupBranchName === undefined) {
-			this.showInformationMessage("Create Backup Branch cancelled");
-			return;
+			if (branchInfoMap.has(currentBranchName)) {
+				this.showErrorMessage(`Create Backup Branch failed: "${currentBranchName}" already has a backup branch, aborting`);
+				return;
+			}
+
+			let inputBackupBranchName = await vscode.window.showInputBox({
+				placeHolder: "Type a Branch Name, or press ENTER and use the default",
+				prompt: "Create Backup Branch with Name"
+			});
+			if (inputBackupBranchName === undefined) {
+				this.showInformationMessage("Create Backup Branch cancelled");
+				return;
+			}
+			backupBranchName = (inputBackupBranchName !== "") ? inputBackupBranchName : backupBranchName;
 		}
-		backupBranchName = (backupBranchName !== "") ? backupBranchName : (this._config.backupBranchNamePrefix + currentBranchName);
 
 		let allBranches = (await this._git.branch()).branches;
 		let allBranchNames = new Set();
@@ -236,14 +277,16 @@ class GitBackupSync {
 			return;
 		}
 
-		await this._branchInfo.update(this._config.branchInfoPath, currentBranchName, {
-			autoBackup: this._config.defaultAutoBackupBranches,
-			backupBranchName: backupBranchName,
-		});
+		if (this._config.branchInfoConfig !== undefined) {
+			await this._branchInfo.update(this._config.branchInfoConfig.branchInfoPath, currentBranchName, {
+				autoBackup: this._config.defaultAutoBackupBranches,
+				backupBranchName: backupBranchName,
+			});
+		}
 		// unstage current changes
 		console.log(await this._git.reset());
-		if (this._config.shouldCommitBranchInfoFile) {
-			console.log(await this._git.add(this._config.branchInfoPath));
+		if (this._config.branchInfoConfig !== undefined && this._config.branchInfoConfig.shouldCommitBranchInfoFile) {
+			console.log(await this._git.add(this._config.branchInfoConfig.branchInfoPath));
 			console.log(await this._git.commit(`git-backup-sync: create backup branch for [${currentBranchName}]`));
 		}
 		console.log(await this._git.branch([backupBranchName, currentBranchName]));
@@ -258,16 +301,16 @@ class GitBackupSync {
 		let currentBranchName: string = await this.getCurrentBranchName(branchName);
 		this.showOutputMessage(`Retiring Backup Branch for "${currentBranchName}"`);
 
-		let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoPath);
-		let backupBranchInfo = branchInfoMap.get(currentBranchName);
-
-		if (backupBranchInfo === undefined) {
+		let backupBranchName = await this.getBackupBranchName(currentBranchName);
+		if (backupBranchName === undefined) {
 			this.showErrorMessage(`Retire Backup Branch Aborted: "${currentBranchName}" doesn't have a backup branch, aborting`);
 			return;
 		}
 
-		console.log(await this._branchInfo.delete(this._config.branchInfoPath, currentBranchName));
-		console.log(await this._git.deleteLocalBranch(backupBranchInfo.backupBranchName));
+		if (this._config.branchInfoConfig !== undefined) {
+			console.log(await this._branchInfo.delete(this._config.branchInfoConfig.branchInfoPath, currentBranchName));
+		}
+		console.log(await this._git.deleteLocalBranch(backupBranchName));
 
 		// TODO: undo the "git-backup-sync: create backup branch" commit?
 	}
@@ -280,17 +323,15 @@ class GitBackupSync {
 		let currentBranchName: string = await this.getCurrentBranchName(branchName);
 		this.showOutputMessage(`Syncing Backup Branch for "${currentBranchName}"`);
 
-		let branchInfoMap = await this._branchInfo.getMap(this._config.branchInfoPath);
-		let backupBranchInfo = branchInfoMap.get(currentBranchName);
-
-		if (backupBranchInfo === undefined) {
+		let backupBranchName = await this.getBackupBranchName(currentBranchName);
+		if (backupBranchName === undefined) {
 			this.showErrorMessage(`Sync Backup Branch Aborted: "${currentBranchName}" doesn't have a backup branch, aborting`);
 			return;
 		}
 
 		// by recreating the local backup branch, we make sure the local backup branch is in sync to the local branch
-		console.log(await this._git.deleteLocalBranch(backupBranchInfo.backupBranchName));
-		console.log(await this._git.branch([backupBranchInfo.backupBranchName, currentBranchName]));
+		console.log(await this._git.deleteLocalBranch(backupBranchName));
+		console.log(await this._git.branch([backupBranchName, currentBranchName]));
 	}
 
 	public async backup(branchName?: string): Promise<void> {
@@ -300,13 +341,13 @@ class GitBackupSync {
 		let currentBranchName = await this.getCurrentBranchName(branchName);
 		this.showOutputMessage(`Backing up Current Branch "${currentBranchName}"`);
 
-		let branchInfo = await this._branchInfo.get(this._config.branchInfoPath, currentBranchName);
-		if (branchInfo === undefined) {
+		let backupBranchName = await this.getBackupBranchName(currentBranchName);
+		if (backupBranchName === undefined) {
 			this.showErrorMessage("Backup failed: no backup branch found. Please create backup branch first");
 			return;
 		}
-		let backupBranchName: string = branchInfo.backupBranchName;
 
+		let failed = false;
 		// unstages current changes
 		console.log(await this._git.reset());
 		try {
@@ -320,12 +361,26 @@ class GitBackupSync {
 		}
 		// stage and commits current changes to backup branch
 		console.log(await this._git.add("."));
-		console.log(await this._git.commit(`git-backup-sync: backup commit [${randomUUID()}]`));
-		// force pushes since we are rewriting git history
-		console.log(await this._git.push(this._config.defaultBackupUpstreamName, backupBranchName, ["--force"]));
-		// IMPORTANT: the local backup branch is ALWAYS maintained in a state in sync with your local branch
-		// 		It is therefore always lagging behind the upstream backup branch.
-		console.log(await this._git.reset(["--mixed", "HEAD~1"]));
+		try {
+			console.log(await this._git.commit(`git-backup-sync: backup commit [${randomUUID()}]`));
+		} catch(exception) {
+			failed = true;
+			console.log(await this._git.reset());
+		}
+		if (!failed) {
+			try {
+				// force pushes since we are rewriting git history
+				console.log(await this._git.push(this._config.defaultBackupUpstreamName, backupBranchName, ["--force"]));
+			} catch(exception) {
+				failed = true;
+				this.showErrorMessage(`Backup failed: force push to ${this._config.defaultBackupUpstreamName}/${backupBranchName} failed`);
+			}
+		}
+		if (!failed) {
+			// IMPORTANT: the local backup branch is ALWAYS maintained in a state in sync with your local branch
+			// 		It is therefore always lagging behind the upstream backup branch.
+			console.log(await this._git.reset(["--mixed", "HEAD~1"]));
+		}
 		console.log(await this._git.checkout(currentBranchName));
 	}
 
@@ -341,9 +396,8 @@ class GitBackupSync {
 			return false;
 		}
 
-		let backupBranchName: string;
-		let branchInfo = await this._branchInfo.get(this._config.branchInfoPath, currentBranchName);
-		if (branchInfo === undefined) {
+		let backupBranchName = await this.getBackupBranchName(currentBranchName);
+		if (backupBranchName === undefined) {
 			///ask user if they want to loadBackup by giving a backup Branch name
 			let branchName = await vscode.window.showInputBox({
 				placeHolder: 'No backup branch found.Type a Branch Name, or press Esc to cancel',
@@ -358,26 +412,15 @@ class GitBackupSync {
 
 			backupBranchName = branchName;
 		}
-		else {
-			backupBranchName = branchInfo.backupBranchName;
-		}
+		// TODO: add check to confirm branch exists upstream
 
-		
-		/*
-		let branchInfo = await this._branchInfo.get(this._config.branchInfoPath, currentBranchName);
-		if (branchInfo === undefined) {
-			this.showErrorMessage(`Load Backup failed: No backup branch found for "${currentBranchName}"`);
-			return false;
-		}
-		let backupBranchName: string = branchInfo.backupBranchName;
-		*/
 		// stashes the current changes. Normally this shouldn't do anything since you wouldn't want to load backup with local changes
 		console.log(await this._git.stash());
 		console.log(await this._git.checkout(backupBranchName));
 		console.log(await this._git.fetch());
 		// pulls in the most up to date backup branch
 		console.log(await this._git.reset(["--hard", this._config.defaultBackupUpstreamName + "/" + backupBranchName]));
-		
+
 		// Check if backup branch is out of sync
 		// only acceptable output is "0 1", where backup branch is ahead by only 1 commit; which is the backup commit
 		let checkResult = await this.checkBranchesInSync(currentBranchName, backupBranchName, 0, 1);
