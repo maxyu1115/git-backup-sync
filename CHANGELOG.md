@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.4.0] - 2024-?
+
+### Changed
+- Refactored and made the BranchInfo file an opt-in feature. For the few fans of this feature, you'll need to manually enable it after the update.
+
+### Fixed
+- Removed BranchInfo file caching to avoid bugs related to non-gbs modifications to the file
+
+
 ## [0.3.0] - 2023-08-13
 
 ### Changed

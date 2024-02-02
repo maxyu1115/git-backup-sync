@@ -1,7 +1,7 @@
 import { TextDecoder, TextEncoder } from 'util';
 import * as vscode from 'vscode';
 
-interface BranchInfo {
+export interface BranchInfo {
     autoBackup: boolean,
     backupBranchName: string,
 }
@@ -9,7 +9,6 @@ interface BranchInfo {
 
 export class BranchInfoManager {
     private workspaceUri: vscode.Uri;
-    private lastPath?: string;
     private branchInfoMap: Map<string, BranchInfo> = new Map();
 
     private encoder = new TextEncoder();
@@ -17,11 +16,10 @@ export class BranchInfoManager {
 
     constructor(workspaceUri: vscode.Uri) {
         this.workspaceUri = workspaceUri;
-        this.lastPath = undefined;
     }
 
-    private async readBranchInfoFile() {
-        let branchInfoUri = this.workspaceUri.with({path: this.workspaceUri.path + "/" + this.lastPath});
+    private async readBranchInfoFile(branchInfoPath: string) {
+        let branchInfoUri = this.workspaceUri.with({path: this.workspaceUri.path + "/" + branchInfoPath});
         return vscode.workspace.fs.readFile(branchInfoUri).then(content => {
             this.branchInfoMap = new Map();
             const jsonObject = JSON.parse(this.decoder.decode(content));
@@ -34,8 +32,8 @@ export class BranchInfoManager {
         });
     }
 
-    private async updateBranchInfoFile() {
-        let branchInfoUri = this.workspaceUri.with({path: this.workspaceUri.path + "/" + this.lastPath});
+    private async updateBranchInfoFile(branchInfoPath: string) {
+        let branchInfoUri = this.workspaceUri.with({path: this.workspaceUri.path + "/" + branchInfoPath});
         return vscode.workspace.fs.writeFile(branchInfoUri, 
             this.encoder.encode(
                 JSON.stringify(Object.fromEntries(this.branchInfoMap), null, 4)
@@ -44,12 +42,7 @@ export class BranchInfoManager {
     }
 
     public async getMap(branchInfoPath: string): Promise<Map<string, BranchInfo>> {
-        if (this.lastPath === branchInfoPath) {
-            return this.branchInfoMap;
-        }
-        this.lastPath = branchInfoPath;
-        // only read from fs when cache is invalidated
-        return this.readBranchInfoFile().then(() => this.branchInfoMap);
+        return this.readBranchInfoFile(branchInfoPath).then(() => this.branchInfoMap);
     }
 
     public async get(branchInfoPath: string, branchName: string): Promise<BranchInfo | undefined> {
@@ -64,21 +57,21 @@ export class BranchInfoManager {
         // this makes sure the branch info map is up to date
         await this.getMap(branchInfoPath);
         this.branchInfoMap.set(branchName, branchInfo);
-        return this.updateBranchInfoFile();
+        return this.updateBranchInfoFile(branchInfoPath);
     }
 
     public async delete(branchInfoPath: string, branchName: string) {
         // this makes sure the branch info map is up to date
         await this.getMap(branchInfoPath);
         this.branchInfoMap.delete(branchName);
-        return this.updateBranchInfoFile();
+        return this.updateBranchInfoFile(branchInfoPath);
     }
     
     public async updateAutoBackup(branchInfoPath: string, defaultAutoBackupBranches:boolean) {
         await this.getMap(branchInfoPath);
-        this.branchInfoMap.forEach( (_branchInfo,branchName) => {
+        this.branchInfoMap.forEach( (_branchInfo, branchName) => {
             _branchInfo.autoBackup = defaultAutoBackupBranches;
         });
-        return this.updateBranchInfoFile();
+        return this.updateBranchInfoFile(branchInfoPath);
     }
 }

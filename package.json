@@ -46,11 +46,6 @@
       "type": "object",
       "title": "Git Backup & Sync",
       "properties": {
-        "git-backup-sync.branchInfoPath": {
-          "type": "string",
-          "default": ".bbinfo",
-          "description": "Path pointing to the Backup Branch Info file. This file stores backup branch information necessary to the extension. "
-        },
         "git-backup-sync.defaultAutoBackupBranches": {
           "type": "boolean",
           "default": false,
@@ -61,15 +56,25 @@
           "default": "origin",
           "description": "The upstream name we backup to. This defaults to \"origin\""
         },
-        "git-backup-sync.shouldCommitBranchInfoFile": {
-          "type": "boolean",
-          "default": false,
-          "description": "When creating a new Backup Branch, do you want to commit the branch info file change. (This is useful for sharing across devices)"
-        },
         "git-backup-sync.backupBranchNamePrefix": {
           "type": "string",
           "default": "gbs-backup-",
           "description": "The prefix of backup branch name. This defaults to 'gbs-backup-' "
+        },
+        "git-backup-sync.branchInfo.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to enable the branch info file. Enabling this file allows for more granular customization per branch, at the cost of needing to manage an additional config file."
+        },
+        "git-backup-sync.branchInfo.path": {
+          "type": "string",
+          "default": ".bbinfo",
+          "markdownDescription": "**This only is effective when branchInfo file is enabled**. Path pointing to the Backup Branch Info file. "
+        },
+        "git-backup-sync.branchInfo.shouldCommitBranchInfoFile": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "**This only is effective when branchInfo file is enabled**. When creating a new Backup Branch, do you want to commit the branch info file change. (This is useful for sharing across devices)"
         }
       }
     }
