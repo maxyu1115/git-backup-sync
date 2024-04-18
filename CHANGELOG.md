@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.4.0] - 2024-?
+## [0.4.0] - 2024-04-17
 
 ### Changed
 - Refactored and made the BranchInfo file an opt-in feature. For the few fans of this feature, you'll need to manually enable it after the update.
